@@ -2,9 +2,8 @@ import numpy as np
 
 
 class ReplayMemory:
-    """必须保证外部不对ReplayMemory中的数据进行修改"""
+    """It must be ensured that the data in ReplayMemory will not be modified externally, be careful with in-place operations"""
     def __init__(self, buffer_size, state_dt=np.ndarray, action_dt=np.int, **kwargs):
-        """状态是同一的，可转为ndarray"""
         self.exp_dt = [('s', state_dt), ('a', action_dt), ('r', np.float), ('s_', state_dt), ('d', np.bool)]
         self.buffer_size = buffer_size
         self.buffer = np.empty(self.buffer_size, dtype=self.exp_dt)
@@ -26,7 +25,7 @@ class ReplayMemory:
 
     @staticmethod
     def unzip(non_nested):
-        """广义的二维矩阵转置+元素的shape扩张：n个(shape1, shape2, ...) -> (n个shape1, n个shape2, ...) -> ((n, *shape1), (n, *shape2), ...) -> (extended_shape1, extended_shape2, ...)"""
+        """transpose operation or inverse operation of zip"""
         return tuple(map(np.array, zip(*non_nested)))
 
 

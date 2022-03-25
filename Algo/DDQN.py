@@ -3,6 +3,7 @@ from .RL import ValueBasedRL
 
 
 class DDQN(ValueBasedRL):
+    """Double DQN"""
     def __init__(self,
                  model,
                  exp_buffer,

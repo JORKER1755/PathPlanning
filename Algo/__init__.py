@@ -2,10 +2,7 @@
 
 """
 import Supervisor as sp
-
-
-dqn, dqn2, ddqn, ddpg, ac = 'DQN', 'DQN2', 'DDQN', 'DDPG', 'AC'   # algorithm name
-M_CNN, M_CNN2, M_CNN3, M_MLP, M_SHARED_CNN, M_SHARED_MLP = 'cnn', 'cnn2', 'cnn3', 'mlp', 'shared_cnn', 'shared_mlp'   # model_id
+import options
 
 
 class AlgoDispatch:
@@ -14,7 +11,7 @@ class AlgoDispatch:
     信息提供的顺序：basic info => algo info => supervisor info => model info
     """
     import_algo_code = 'from .{0} import {0}'
-    supervisor_map = {dqn: sp.S_VALUE, dqn2: sp.S_VALUE, ddqn: sp.S_VALUE, ddpg: sp.S_ACTOR_CRITIC, ac: sp.S_ACTION_VALUE}  # 配置算法关联的supervisor
+    supervisor_map = {options.dqn: sp.S_VALUE, options.dqn2: sp.S_VALUE, options.ddqn: sp.S_VALUE, options.ddpg: sp.S_ACTOR_CRITIC, options.ac: sp.S_ACTION_VALUE}  # 配置算法关联的supervisor
 
     def __init__(self, algo_name, model_name):
         """basic info"""

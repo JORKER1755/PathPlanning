@@ -1,3 +1,11 @@
+#Experiment/
+#!Experiment/*.py
+#Scene/random/
+.idea/
+test/
+Test/
+*.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 */__pycache__/
@@ -138,13 +146,4 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-Experiment/
-!Experiment/*.py
-Scene/random/
-Scene/typical/
-Scene/other/
-.idea/
-test/
-Test/
-*.zip
-Run/analysis
+

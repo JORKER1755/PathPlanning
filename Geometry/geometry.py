@@ -3,28 +3,50 @@ import math
 # import functools
 
 
+class Distance:
+    sqrt2 = math.sqrt(2)
+
+    @staticmethod
+    def euclidean(self, other):
+        return math.hypot(self.x - other.x, self.y - other.y)
+
+    @staticmethod
+    def manhattan(self, other):
+        return abs(self.x - other.x) + abs(self.y - other.y)
+
+    @staticmethod
+    def diagonal(self, other):
+        dx = abs(self.x - other.x)
+        dy = abs(self.y - other.y)
+        return dx + dy + (self.sqrt2 - 2) * min(dx, dy)
+
+    @staticmethod
+    def chebyshev(self, other):
+        return max(abs(self.x - other.x), abs(self.y - other.y))
+
+
 class Geometry:
     @staticmethod
-    def distance(point):    # shape=(2, )               支持非ndarray
+    def dist(point):    # shape=(2, )               支持非ndarray
         return np.hypot(*point)
 
     @staticmethod
-    def distances(points):  # shape=(n, 2) or (2, )     必须为ndarray
+    def dist_batch(points):  # shape=(n, 2) or (2, )     必须为ndarray
         return np.hypot(*points.T)
 
     @classmethod
-    def distance_p2seg(cls, p, p1, p2):
-        """点到线段的最短距离"""
+    def dist_p2seg(cls, p, p1, p2):
+        """The shortest distance from point to line segment """
         p2p1, pp1 = p2 - p1, p - p1
         d = np.dot(p2p1, pp1)
-        if d <= 0.: return cls.distance(pp1)
+        if d <= 0.: return cls.dist(pp1)
         d2 = np.dot(p2p1, p2p1)
-        if d >= d2: return cls.distance(p - p2)
-        return cls.distance(pp1 - p2p1 * d / d2)
+        if d >= d2: return cls.dist(p - p2)
+        return cls.dist(pp1 - p2p1 * d / d2)
 
     @classmethod
-    def distance_p2arc(cls, p, center, radius, start, extent):
-        """点到圆弧的最短距离，类比点到线段的距离"""
+    def dist_p2arc(cls, p, center, radius, start, extent):
+        """The shortest distance from a point to an arc"""
         # 中间区域的点，在pp1之上，在pp2之下，p1为圆弧起点，p2为圆弧终点，逆时针
 
         assert radius > 0.
@@ -43,10 +65,10 @@ class Geometry:
         cross1 = np.cross(cp1, cp)
         cross2 = np.cross(cp, cp2)
         if cross1 > 0. and cross2 > 0.:     # 中间区域
-            dis = abs(radius-cls.distance(cp))
+            dis = abs(radius - cls.dist(cp))
         else:
-            dis1 = cls.distance(p-p1)
-            dis2 = cls.distance(p-p2)
+            dis1 = cls.dist(p - p1)
+            dis2 = cls.dist(p - p2)
             dis = min(dis1, dis2)
         # print(cross1, cross2)
         return dis

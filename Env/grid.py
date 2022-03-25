@@ -7,7 +7,7 @@ if common.use_windows:
 
 
 class Grid:
-    """通常的直角坐标系：x轴水平向右，y轴竖直向上，位置坐标：(x,y)"""
+    """Cartesian Coordinate System"""
     canvas_width, canvas_height = 700, 700
     timeout, failure, border, success, back, n_outcomes = 0, 1, 2, 3, 4, 5
     UP, TOPLEFT, LEFT, LOWERLEFT, DOWN, LOWERRIGHT, RIGHT, TOPRIGHT = np.arange(8)

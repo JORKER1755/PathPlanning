@@ -1,8 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'}
 import tensorflow as tf
-print(tf.__version__)
-
+assert str(tf.__version__).startswith('1.'), "only tensorflow v1 is supported"
 
 # from .util import ModelInfo
 

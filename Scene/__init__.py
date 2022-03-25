@@ -1,15 +1,18 @@
 """
-scene = task + obstacle
+scene/scenairo = task + obstacle
+The scene data must be floating point type
 """
 from common import project_dir
 import os
 import numpy as np
 from Env.flight import Scenairo
+from .obstacle import complex_circle_obs
 
 
 D_RANDOM, D_TYPICAL, D_OTHER = 'random', 'typical', 'other'         # data_source
 T_TEST, T_EASY, T_HARD = np.arange(3)
 
+# 最终实验选用的场景
 circle_train_task4x200 = {'data_source': D_RANDOM, 'task_id': T_HARD, 'obs_id': 100}
 circle_test_task4x100 = {'data_source': D_RANDOM, 'task_id': T_HARD, 'obs_id': 101}
 line_train_task4x200 = {'data_source': D_RANDOM, 'task_id': T_HARD, 'obs_id': 200}
@@ -64,6 +67,7 @@ class ScenarioLoader:
         self.n_scenarios = int(percentage * len(self.scenarios))
         self.scenarios = self.scenarios[:self.n_scenarios]
         print('obs_id: {}, task_id: {}, n_scenarios: {}, percentage: {}'.format(obs_id, task_id, self.n_scenarios, percentage))
+        return self.scenarios
 
     def load_task(self, task_id):
         init_p_file = self.scene_dir.join('start_pos{}.npy'.format(task_id))
@@ -75,8 +79,9 @@ class ScenarioLoader:
                         np.load(goal_p_file, allow_pickle=True).astype(np.float),
                         np.load(goal_d_file, allow_pickle=True).astype(np.float)))
 
-    def select_task(self, mode):
-        return list(zip(*self.task_map[mode]))
+    @classmethod
+    def select_task(cls, mode):
+        return list(zip(*cls.task_map[mode]))
 
     def coupling_circle_scene(self):
         print("coupling_circle: task_size: {}, obstacles_size: {}".format(len(self.tsks), len(self.obss)))
@@ -93,3 +98,10 @@ class ScenarioLoader:
     def independent_line_scene(self):
         print("independent_line: task_size: {}, obstacles_size: {}".format(len(self.tsks), len(self.obss)))
         return [Scenairo(*tsk, line_obstacles=obs) for tsk in self.tsks for obs in self.obss]
+
+    def random_scene(self):
+        """随机生成圆形障碍场景：任务也是随机选"""
+        tsk_id = np.random.randint(0, 4)
+        obs = complex_circle_obs()[0]
+        tsks = self.task_map[T_HARD]
+        return Scenairo(tsks[0][tsk_id], tsks[1][tsk_id], tsks[2][tsk_id], tsks[3][tsk_id], obs.astype(np.float))

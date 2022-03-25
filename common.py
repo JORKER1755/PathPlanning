@@ -8,11 +8,11 @@ import sys
 project_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(project_dir)
 
-from Utility.util import Path
+from utils import Path
 project_dir = Path(project_dir)
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# 用来打开/关闭GUI相关代码
+# Used to open/close GUI related code
 use_windows = sys.platform == 'win32'

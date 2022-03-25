@@ -1,5 +1,4 @@
 import numpy as np
-from Scene.draw_scene import DrawScene
 import math
 
 
@@ -130,66 +129,21 @@ def complex_line_obs(n_scene=1):
     return line.random_generate(n_scene)
 
 
-tasks = {'easy': ([(50, 50), (50, 650), (650, 650), (650, 50)],
-                  [(650, 650), (650, 50), (50, 50), (50, 650)],
-                  [45, -45, -135, 135]),
-         'hard': ([[150, 150], [150, 550], [550, 550], [550, 150]],
-                  [[550, 550], [550, 150], [150, 150], [150, 550]],
-                  [45, -45, -135, 135]),
-         'test': ([(50, 50)],
-                  [(650, 650)],
-                  [45])}
-
-
 def final_circle_scene():
-    draw = DrawScene()
-    draw.set_task([150, 150], [550, 550])
     obs = complex_circle_obs(100)
-    [draw.draw_obstacle(obs, delay=0.8) for obs in obs[:30]]
     a = input('save: ')
     if a == 'y':
         np.save('random/scene_files/circle_obs101', obs)
 
 
 def final_line_scene():
-    draw = DrawScene()
-    draw.set_task([150, 150], [550, 550])
     obs = complex_line_obs(100)
-    [draw.draw_obstacle(line_obstacles=obs, delay=0.8) for obs in obs[:30]]
     a = input('save: ')
     if a == 'y':
         np.save('random/scene_files/line_obs201', obs)
 
 
-def pick_circle_scene():
-    obs = np.load('random/scene_files/circle_obs101.npy', allow_pickle=True)
-    tsks = zip([(50, 50), (50, 650), (650, 650), (650, 50)],
-                         [(650, 650), (650, 50), (50, 50), (50, 650)],
-                         [45, -45, -135, 135])
-    draw = DrawScene()
-    for tsk in tsks:
-        draw.set_task(*tsk)
-        draw.draw_obstacle(obs[20], delay=0.8)
-        a = input('continue: ')
-
-
 if __name__ == '__main__':
-    pick_circle_scene()
+    final_circle_scene()
+    final_line_scene()
 
-    # final_circle_scene()
-    # final_line_scene()
-    # r = rotate(clockwise=False)
-    # print(r([1, 0]))
-    # print(x)
-    # x = xy_zip(range(4), lambda x:2*x)
-    # x = xy_zip(lambda x:2*x, [2,3,4])
-    # x = xy_zip([4,3,2], [2,3,4])
-    # print(list(x))
-    # _obstacles = BuildingObs().random_generate(10)
-    # print(len(_obstacles))
-    # [draw.draw_obstacle(obs, delay=0.8) for obs in _obstacles]
-    # [draw.draw_obstacle(line_obstacles=obs, delay=0.8) for obs in _obstacles]
-    # show_circle_ob(1)
-    # show_line_ob(2)
-    # compare()
-    # pass

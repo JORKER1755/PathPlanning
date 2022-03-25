@@ -1,5 +1,5 @@
 """
-画布：将来自直角坐标系的对象转换为画布自身的坐标系
+Convert an object from a Cartesian coordinate system to tkinter's coordinate system
 """
 
 import numpy as np
@@ -13,7 +13,7 @@ if common.use_windows:
 
 
 class Canvas:
-    """延迟创建"""
+    """delayed creation"""
     def __init__(self, canvas_size, region_size, title='Path Planning', create=False):
         self.canvas_size = np.array(canvas_size)
         self.canvas_width, self.canvas_height = canvas_size

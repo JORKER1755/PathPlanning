@@ -81,7 +81,7 @@ class ValueBasedRL(OffPolicyRL):
         self.exp_buffer = exp_buffer
         self.model = model
 
-        self.values = None      # 动作价值，模型测试时使用
+        self.values = None      # For testing
 
     def sample(self, state, **kwargs):
         if np.random.uniform() > self.epsilon:  # greedy   0.1

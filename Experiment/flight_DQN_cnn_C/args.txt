@@ -1,0 +1,1 @@
+{'train': False, 'env_t': 'flight', 'algo_t': 'DQN', 'model_t': 'cnn', 'obstacle_type': 'C', 'nth_times': 2, 'max_n_step': 100, 'draw_rate': 0.05, 'episodes': 10, 'nth_rounds': 3, 'percentage': 0.25, 'date': 'Fri Mar 25 16:36:49 2022'}

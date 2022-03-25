@@ -15,48 +15,17 @@ from Geometry.geometry import Geometry, Trajectory
 from Draw.draw import Canvas
 
 
-class Kinematic:
-    def __init__(self):
-        """不保存目标状态"""
-        # self.turning_angle_precision = 1 / max_turning_angle  # 归一化：max_turning_angle->1 => 1->1/max_turning_angle
-        self.turning_angle_precision = 1 / 45  # 1/45 rad = 1.2732395447351628°
-
-        # 状态量
-        self.init_pos, self.init_dir = None, None
-        self.goal_pos, self.goal_dir = None, None
-        self.last_pos, self.last_dir = None, None
-        self.current_pos, self.current_dir = None, None
-
-        self.traj = Trajectory()
-
-    def init(self, init_pos, init_dir, goal_pos, goal_dir):
-        self.init_pos, self.init_dir = np.array(init_pos, dtype=np.float), math.radians(init_dir)
-        self.goal_pos, self.goal_dir = np.array(goal_pos, dtype=np.float), math.radians(goal_dir)
-        self.current_pos, self.current_dir = self.init_pos, self.init_dir
-
-    def transition(self, delta_dir, delta_dis):
-        """time_step; yaw_rate; speed"""
-        if abs(delta_dir) < self.turning_angle_precision:   # 近似认为向前直线飞行
-            delta_pos = np.array([delta_dis * np.cos(self.current_dir), delta_dis * np.sin(self.current_dir)])
-            self.traj.line(self.current_pos, delta_pos)
-        else:
-            radius = delta_dis / delta_dir                  # 有向半径，此处不能取绝对值，利用半径的正负号来统一左转和右转
-            delta_x = radius * (np.sin(delta_dir - self.current_dir) + np.sin(self.current_dir))  # -delta_dir抵消右转角度为负
-            delta_y = radius * (np.cos(delta_dir - self.current_dir) - np.cos(self.current_dir))
-            delta_pos = np.array([delta_x, delta_y])
-            self.traj.arc(self.current_pos, self.current_dir, radius, delta_dir)
-
-        self.last_pos = self.current_pos
-        self.current_pos = self.current_pos + delta_pos     # 禁止任何原址操作，不允许写成：self.current_pos += delta_pos
-        self.last_dir = self.current_dir
-        self.current_dir -= delta_dir                       # python数据类型，此处为非原址操作
-
-
 class Scenairo:
     region_size = np.array([700, 700])
-    center_pos = region_size//2
+    center_pos = region_size // 2
+    # 任务起点与终点之间的最大直线距离，用于归一化
+    max_straight_line_dis = math.hypot(650 - 50, 650 - 50)
 
     def __init__(self, init_pos, init_dir, goal_pos, goal_dir, circle_obstacles=None, line_obstacles=None):
+        """
+        pos: 位置，(x,y)
+        dir：方向，
+        """
         self.init_pos, self.init_dir = init_pos, init_dir
         self.goal_pos, self.goal_dir = goal_pos, goal_dir
         self.circle_obstacles, self.line_obstacles = circle_obstacles, line_obstacles
@@ -66,11 +35,12 @@ class Scenairo:
 
 
 class Action:
-    """提供从动作到控制输入间的转换"""
+    """Map agent's actions to control inputs"""
+
     def __init__(self,
-                 max_turning_angle,         # 转弯角度
-                 min_turning_radius,        # 转弯半径
-                 max_angular_velocity       # 最大转弯角速度
+                 max_turning_angle,  # 转弯角度
+                 min_turning_radius,  # 转弯半径
+                 max_angular_velocity  # 最大转弯角速度
                  ):
         """不保存目标状态"""
         self.max_turning_angle = math.radians(max_turning_angle)
@@ -124,7 +94,7 @@ class ContinueAction(Action):
     def __call__(self, action):
         dis_step_times, angle_action = action
         self.delta_dis = self.basic_distance_step * (
-                    dis_step_times * (self.n_granularity - 1) + self.n_granularity + 1) / 2  # [-1, 1] => [1, n]
+                dis_step_times * (self.n_granularity - 1) + self.n_granularity + 1) / 2  # [-1, 1] => [1, n]
         self.delta_dir = angle_action * self.max_turning_angle
 
 
@@ -142,19 +112,57 @@ class BLPAction(Action):
         self.delta_dis = self.linear_velocity * delta_t
 
 
+class Kinematic:
+    def __init__(self):
+        """不保存目标状态"""
+        # self.turning_angle_precision = 1 / max_turning_angle  # 归一化：max_turning_angle->1 => 1->1/max_turning_angle
+        self.turning_angle_precision = 1 / 45  # 1/45 rad = 1.2732395447351628°
+
+        # 状态量
+        self.init_pos, self.init_dir = None, None
+        self.goal_pos, self.goal_dir = None, None
+        self.last_pos, self.last_dir = None, None
+        self.current_pos, self.current_dir = None, None
+
+        self.traj = Trajectory()
+
+    def init(self, init_pos, init_dir, goal_pos, goal_dir):
+        """设置初始状态，初始状态需要保存"""
+        self.init_pos, self.init_dir = np.array(init_pos, dtype=np.float), math.radians(init_dir)
+        self.goal_pos, self.goal_dir = np.array(goal_pos, dtype=np.float), math.radians(goal_dir)
+        self.current_pos, self.current_dir = self.init_pos, self.init_dir
+
+    def transition(self, delta_dir, delta_dis):
+        """time_step; yaw_rate; speed"""
+        if abs(delta_dir) < self.turning_angle_precision:  # 近似认为向前直线飞行
+            delta_pos = np.array([delta_dis * np.cos(self.current_dir), delta_dis * np.sin(self.current_dir)])
+            self.traj.line(self.current_pos, delta_pos)
+        else:
+            radius = delta_dis / delta_dir  # 有向半径，此处不能取绝对值，利用半径的正负号来统一左转和右转
+            delta_x = radius * (np.sin(delta_dir - self.current_dir) + np.sin(self.current_dir))  # -delta_dir抵消右转角度为负
+            delta_y = radius * (np.cos(delta_dir - self.current_dir) - np.cos(self.current_dir))
+            delta_pos = np.array([delta_x, delta_y])
+            self.traj.arc(self.current_pos, self.current_dir, radius, delta_dir)
+
+        self.last_pos = self.current_pos
+        self.current_pos = self.current_pos + delta_pos  # Any in-place operations are prohibited, don't write: self.current_pos += delta_pos
+        self.last_dir = self.current_dir
+        self.current_dir -= delta_dir  # python数据类型，此处为非原址操作
+
+
 class Flight(Kinematic):
-    """考虑运动学模型，位置+方向，定时间步长，定速，最大转弯角速率、最小转弯半径"""
     timeout, failure, border, success, n_outcomes = 0, 1, 2, 3, 4
 
     def __init__(self,
-                 action=DiscreteAction(45, 10., math.pi/60, 4, 5),
+                 action=DiscreteAction(45, 10., math.pi / 60, 4, 5),
                  max_detect_range=120.,  # 探测范围
                  detect_angle_interval=5,  # 距离传感器间的角度间隔
                  max_detect_angle=90,  # 最大探测角度
                  safe_dis=0.,  # 安全距离
-                 canvas_size=None,  # 画布大小
+                 canvas_size=None,  # 画布大小，默认是场景区域大小
                  add_noise=False,  # 是否对距离传感器施加噪声
-                 use_border=False):
+                 use_border=True  # 是否将场景边界视为障碍
+                 ):
         super().__init__()
         self.region_width, self.region_height = Scenairo.region_size
         self.canvas = Canvas(Scenairo.region_size if canvas_size is None else canvas_size, Scenairo.region_size)
@@ -188,7 +196,9 @@ class Flight(Kinematic):
         self.d_states = sum(self.d_states_detail)  # 周围环境+目标方位
         self.terminal = np.zeros(self.d_states)  # 结束状态
         self.result = None
-        self.residual_traj = None               # 当前位置到目标位置的剩余轨迹（直线）
+        self.residual_traj = None  # 当前位置到目标位置的剩余轨迹（直线）
+
+        print("d_obstacles: ", self.d_obstacles)
 
         # 控制量
         self.delta_dis = None
@@ -213,18 +223,19 @@ class Flight(Kinematic):
 
     def render_trajectory(self, points, show_scope=False, circle_scope=True, show_arrow=False, show_pos=True):
         """根据点列绘制轨迹"""
-        for i in range(len(points)-1):
-            self.traj.line2(points[i], points[i+1])
-            self.current_pos = points[i+1]
-            delta_x, delta_y = points[i+1]-points[i]
+        for i in range(len(points) - 1):
+            self.traj.line2(points[i], points[i + 1])
+            self.current_pos = points[i + 1]
+            delta_x, delta_y = points[i + 1] - points[i]
             self.current_dir = math.atan2(delta_y, delta_x)
             self.render(0., True, show_scope, circle_scope, show_arrow, show_pos)
 
-    def render(self, sleep_time=0.01, show_trace=True, show_scope=False, circle_scope=True, show_arrow=False, show_pos=False):
+    def render(self, sleep_time=0.01, show_trace=True, show_scope=False, circle_scope=True, show_arrow=False,
+               show_pos=False):
         # call step before render
-        if self.redraw:     # draw scenairo
+        if self.redraw:  # draw scenairo
             self.redraw = False
-            self.canvas.create()    # create or reset canvas
+            self.canvas.create()  # create or reset canvas
             # draw start point and goal point
             radius = 8
             self.canvas.draw_oval(self.init_pos, radius, 'black', transform_radius=False)
@@ -242,7 +253,7 @@ class Flight(Kinematic):
             if self.line_obstacles is not None:
                 for obstacle in self.line_obstacles:
                     self.canvas.draw_line(obstacle[:2], obstacle[2:], 'deepskyblue')
-        if show_trace:      # draw trace
+        if show_trace:  # draw trace
             if self.traj.traj_type == self.traj.ARC:
                 self.canvas.draw_arc(*self.traj.traj, 'black')
             else:
@@ -255,7 +266,8 @@ class Flight(Kinematic):
                 if circle_scope:
                     self.canvas.draw_oval(self.current_pos, self.max_detect_range, 'pink', background=True)
                 else:
-                    self.canvas.draw_sector(self.current_pos, self.max_detect_range, self.current_dir - math.pi / 2, math.pi, 'pink', background=True)
+                    self.canvas.draw_sector(self.current_pos, self.max_detect_range, self.current_dir - math.pi / 2,
+                                            math.pi, 'pink', background=True)
         self.canvas.update(sleep_time)
 
     def reset(self, scenairo):
@@ -266,6 +278,11 @@ class Flight(Kinematic):
 
         self.last_raw_goal_abs_dir = 0.
         self.compensate_goal_abs_dir = 0.
+        # init_goal_rel_dir = self.get_goal_dir()                 # 依赖于上面的四个量，顺序不允许调整
+        # if init_goal_rel_dir > math.pi:                         # limit initial angle to [-180, 180]
+        #     self.compensate_goal_abs_dir = self.double_pi       # 增加goal_abs_dir可减少goal_rel_dir
+        # elif init_goal_rel_dir < -math.pi:
+        #     self.compensate_goal_abs_dir = -self.double_pi
 
         self.delta_dis = None
         self.yaw_rate = 0.
@@ -275,15 +292,14 @@ class Flight(Kinematic):
         self.result = self.timeout
         self.residual_traj = None
         self._state()
-        self.straight_line_dis = self.goal_dis
+
+        self.straight_line_dis = Scenairo.max_straight_line_dis
         self.last_goal_dis, self.last_goal_abs_dir = self.goal_dis, abs(self.goal_dir)
         return self.state
 
     def step(self, action):
-        """进入吸收状态后，有些状态没有被更新，继续调用step会导致结果未定义"""
         self.action(action)
         self.delta_dir, self.delta_dis = self.action.delta_dir, self.action.delta_dis
-        # 左转和右转相反，直行时半径无穷大，取极限
         self.transition(self.delta_dir, self.delta_dis)
 
         self.delta_time = self.delta_dis / self.action.linear_velocity
@@ -292,23 +308,21 @@ class Flight(Kinematic):
         self.yaw_rate = self.delta_dir / self.delta_time
         self.delta_yaw_rate = self.yaw_rate - last_yaw_rate
 
-        # print('delta_t: {0}, delta_d: {1}, yaw_rate: {2}, delta_yaw_rate: {3}, delta_angle: {4}'.
-        #       format(self.delta_time, self.delta_dis, self.yaw_rate, self.delta_yaw_rate, self.delta_dir))
-
-        # basic reward: failure + success
-        if not self.is_safe():  # failure
+        if not self.is_safe():  # check cross
             self.result = self.failure
             return self.terminal, -10., True
 
         self._state()
-        if Geometry.distance_p2seg(self.goal_pos, self.last_pos, self.current_pos) <= \
-                4. * self.action.basic_distance_step:  # success
+        if Geometry.dist_p2seg(self.goal_pos, self.last_pos, self.current_pos) <= \
+                4. * self.action.basic_distance_step:  # check goal      点到线段的距离
             self.result = self.success
             self.residual_traj = self.current_pos, self.goal_pos
             return self.terminal, 10., True
 
+        # granularity reward
+        reward = 0.1 * self.delta_time / self.action.max_time_step
+
         # greed reward
-        reward = 0.
         if self.goal_dis < self.last_goal_dis:  # distance decrease
             reward += 0.2
         else:  # distance increase
@@ -319,26 +333,27 @@ class Flight(Kinematic):
         else:  # direction increase
             reward += -0.2
 
+        # smoothness reward
+        abs_delta_yaw_rate = abs(self.delta_yaw_rate)  # 不能使用角度，而应该使用角速率
+        reward -= abs_delta_yaw_rate / self.action.max_angular_velocity * 0.05  # [0, 2*yaw_rate] -> [0, -0.1]
+
         self.last_goal_dis, self.last_goal_abs_dir = self.goal_dis, goal_abs_dir
         return self.state, reward, False
 
     def is_safe(self):
         if self.circle_obstacles is None:
             circle_safe = True
-        else:  # 只检查了点是否落入障碍内，而没有检查线段是否穿越障碍的情况
-            # square_dis = np.sum(np.square(self.circle_obstacles[:, :2] - self.current_pos), axis=1)
-            # circle_safe = np.all(square_dis > np.square(self.circle_obstacles[:, 2]))
-
-            if self.traj.traj_type == self.traj.ARC:    # 当前轨迹为弧
+        else:
+            if self.traj.traj_type == self.traj.ARC:  # 当前轨迹为弧
                 for circle in self.circle_obstacles:
                     center, radius = circle[:2], circle[2]
-                    dis = Geometry.distance_p2arc(center, *self.traj.traj)
+                    dis = Geometry.dist_p2arc(center, *self.traj.traj)
                     if dis < radius:
                         return False
             else:
                 for circle in self.circle_obstacles:
                     center, radius = circle[:2], circle[2]
-                    dis = Geometry.distance_p2seg(center, *self.traj.traj)
+                    dis = Geometry.dist_p2seg(center, *self.traj.traj)
                     if dis < radius:
                         return False
 
@@ -364,7 +379,7 @@ class Flight(Kinematic):
             tem2 = np.logical_and(0 <= k2, k2 <= 1)
             line_safe = not np.any(np.logical_and(tem1, tem2))
         # return line_safe and circle_safe
-        return line_safe    # and circle_safe
+        return line_safe  # and circle_safe
 
     def _state(self):
         all_dis = []
@@ -380,13 +395,26 @@ class Flight(Kinematic):
 
     @property
     def state(self):
+        """
+        obs_distances: [0, 1] & {2}
+        goal_dis: [0, 1]
+        goal_dir: [-1, 1]
+        """
         return np.concatenate((self.obs_distances / self.max_detect_range,
                                [self.goal_dis / self.straight_line_dis, self.goal_dir / math.pi]))
 
     def get_goal_dis(self):
-        return Geometry.distance(self.goal_pos - self.current_pos)
+        return Geometry.dist(self.goal_pos - self.current_pos)
 
     def get_goal_dir(self):
+        """取值范围: (-360°,360°)，初始取值范围: [-180°,180°]
+        机体坐标系下的目标方向=地面坐标系下的机体方向-地面坐标系下的目标方向，目标位于机体右侧为正
+            根据取值范围(-360°,360°)进行折叠，折叠必须是不可逆的，需要对补偿值进行修正，以避免机体方向摆动的影响
+        地面坐标系下的机体方向：显式地记录，可不断累积，跨越180°线仍然是连续的
+        地面坐标系下的目标方向：隐式地由目标与机体位置关系给出，需处理跨越180°线后角度值存在不连续的问题，通过补偿的方式将其连续化
+            原始目标方向：由arctan2给出，角度值不连续变化
+            真实目标方向：检测跨越180°线情况对原始目标方向进行相应补偿后，得到角度值连续变化的真实目标方向
+        """
         x, y = self.goal_pos - self.current_pos  # 看作目标相对于机体移动
         raw_goal_abs_dir = np.arctan2(y, x)
         # 检测地面坐标系下的目标方向跨越180°线情况并进行相应补偿
@@ -399,10 +427,21 @@ class Flight(Kinematic):
         real_goal_abs_dir = raw_goal_abs_dir + self.compensate_goal_abs_dir  # 补偿
         # 机体坐标系下的目标方向，目标在机体右侧为正
         goal_rel_dir = self.current_dir - real_goal_abs_dir
+        # print("goal_rel_dir: {}".format(goal_rel_dir))
+        # assert self.double_pi >= goal_rel_dir >= -self.double_pi, "out of goal_rel_dir range"
+        # 根据取值范围(-360°,360°)对机体坐标系下的目标方向进行折叠
+        # if goal_rel_dir >= self.double_pi:     # 最大冗余角度阈值360
         if goal_rel_dir > math.pi:  #
+            # goal_rel_dir = math.fmod(goal_rel_dir, self.double_pi)  # 折叠，折叠倍数可能大于1，折叠处摆动造成不稳定
+            # div, goal_rel_dir = divmod(goal_rel_dir, self.double_pi)
+            # self.compensate_goal_abs_dir += div*self.double_pi
             self.compensate_goal_abs_dir += self.double_pi
             goal_rel_dir -= self.double_pi
+        # if goal_rel_dir <= -self.double_pi:
         if goal_rel_dir <= -math.pi:
+            # goal_rel_dir = math.fmod(goal_rel_dir, -self.double_pi)
+            # div, goal_rel_dir = divmod(goal_rel_dir, -self.double_pi)
+            # self.compensate_goal_abs_dir -= div * self.double_pi
             self.compensate_goal_abs_dir -= self.double_pi
             goal_rel_dir += self.double_pi
         return goal_rel_dir
@@ -423,12 +462,11 @@ class Flight(Kinematic):
         square_coe1 = np.square(coe1)
         coe2 = np.square(x1) + np.square(y1) - np.square(self.circle_obstacles[:, 2])
 
-        coe = square_coe1 - coe2
+        coe = square_coe1 - coe2  # 37x7
         mask = coe >= 0
 
         dis = -np.sqrt(coe[mask]) - coe1[mask]
-
-        dis[np.logical_or(dis < 0, dis > self.max_detect_range)] = self.no_obstacle_dis
+        dis[np.logical_or(dis > self.max_detect_range, dis < 0)] = self.no_obstacle_dis
         distance[mask] = dis
         return np.min(distance, axis=1)
 
@@ -497,4 +535,3 @@ class Flight(Kinematic):
         distance[mask1] = dis[mask4]
 
         return np.min(distance, axis=1)
-
